@@ -22,7 +22,7 @@ func main(){
 	//router.GET("/ws/MusicPlayer", func(c *gin.Context){wshandler(c.Writer, c.Request)})
 	router.Use(cors.Default())
 	router.Static("/MusicServer/", root)
-	router.GET("/dir", func(c *gin.Context){
+	router.GET("/MusicServer-dir", func(c *gin.Context){
 		dir := c.Query("dir")
 		files, err := ioutil.ReadDir(root + dir)
 		if err != nil {
@@ -60,8 +60,8 @@ func main(){
 		// 	conn.WriteJSON(msg_out)
 		// }
 	})
-	router.Run(":8024")
-	log.Println("Serveing on 8024")
+	router.Run(":8026")
+	log.Println("Serveing on 8026")
 }
 // var upgrader =websocket.Upgrader{
 // 	CheckOrigin :func(r *http.Request)bool{
