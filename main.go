@@ -21,36 +21,44 @@ func main(){
 	router := gin.Default()
 	//router.GET("/ws/MusicPlayer", func(c *gin.Context){wshandler(c.Writer, c.Request)})
 	router.Use(cors.Default())
-	router.Static("/MusicServer/", root)
-	router.GET("/MusicServer-dir", func(c *gin.Context){
+
+	//serve for music fils.
+	router.Static("/MusicServer/file/", root)
+
+	//serve for files list.
+	router.GET("/MusicServer/dir", func(c *gin.Context){
 		dir := c.Query("dir")
+		//read files in directory.
 		files, err := ioutil.ReadDir(root + dir)
 		if err != nil {
 
 		}
-		s_dir := make([]os.FileInfo,0)
-		s_file := make([]os.FileInfo,0)
+		s_dir := make([]os.FileInfo,0)    //list of folders
+		s_file := make([]os.FileInfo,0)   //list of files
+		
 		for _, f := range files{
 			if(f.Name()[0] != []byte(".")[0]){
 				ext := filepath.Ext(f.Name())
 				if(f.IsDir()){
 					s_dir = append(s_dir, f)
-				} else if audioExt[ext]{
+				} else if audioExt[ext]{ //check if file is music file. 
 					s_file = append(s_file, f)
 				}
 			}
 		}
 		s_dir = append(s_dir, s_file...)
 
+		//Make the list of json for output.
 		names := make([]Item, 0)
 		for _, f := range s_dir {
-
-	        names = append(names, Item{
-	            Name:  f.Name(),
-	            IsDir: f.IsDir(),
-	        })
-	    }
+			names = append(names, Item{
+				Name:  f.Name(),
+				IsDir: f.IsDir(),
+			})
+		}
 		c.JSON(http.StatusOK, names)
+
+		/////WEBSOCKET VERSION
 		// for _, f := range s_dir{
 		// 	msg_out := Item{
 		// 		"item",
@@ -59,10 +67,12 @@ func main(){
 		// 	}
 		// 	conn.WriteJSON(msg_out)
 		// }
+		/////
 	})
 	router.Run(":8026")
 	log.Println("Serveing on 8026")
 }
+/////////////////WEBSOCKET VERSION//////////////////
 // var upgrader =websocket.Upgrader{
 // 	CheckOrigin :func(r *http.Request)bool{
 // 		return true
@@ -130,6 +140,9 @@ func main(){
 // type UpdateList struct{
 // 	Action string
 // }
+////////////////////////////////////////////////
+
+//datatype of file or folder
 type Item struct{
 	Action string//joystick
 	Name string
