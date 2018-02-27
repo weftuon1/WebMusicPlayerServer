@@ -12,11 +12,25 @@ import(
 	//"strconv"
 	"os"
 	"path/filepath"
+	"gopkg.in/mgo.v2"
+	//"gopkg.in/mgo.v2/bson"
 )
 var audioExt = map[string]bool{
 	".wav": true,".webm": true,".opus": true,".ogg": true,".mp3": true,".m4a": true,".flac": true,
 }
 var root = "./web/mnt"
+/////const for MONGODB.
+var Host = []string{
+	"127.0.0.1:27017",
+	// replica set addrs...
+}
+const (
+	Username   = "YOUR_USERNAME"
+	Password   = "YOUR_PASS"
+	Database   = "playerSongList"
+	Collection = "YOUR_COLLECTION"
+)
+/////
 func main(){
 	router := gin.Default()
 	//router.GET("/ws/MusicPlayer", func(c *gin.Context){wshandler(c.Writer, c.Request)})
@@ -27,8 +41,44 @@ func main(){
 
 	//serve for files list.
 	router.GET("/MusicServer/dir", directoryHandler)
+
+	
+	/////MONGOBD
+	router.GET("/MusicServer/songlist", showSongListHandler)
+	/////
+
+
 	router.Run(":8026")
 	log.Println("Serveing on 8026")
+}
+func showSongListHandler(c *gin.Context){
+	session, err := mgo.DialWithInfo(&mgo.DialInfo{
+		Addrs: Host,
+		// Username: Username,
+		// Password: Password,
+		// Database: Database,
+		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
+		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
+		// },
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	// Collection
+	collection := session.DB(Database).C("testSongList")
+
+	testSong := Song{
+		Name:"test-song1",
+		Url: "urlurlurl",
+	}
+
+	// Insert
+	if err := collection.Insert(testSong); err != nil {
+		panic(err)
+	}
+
 }
 func directoryHandler(c *gin.Context){
 	dir := c.Query("dir")
@@ -150,4 +200,11 @@ type Item struct{
 	Action string//joystick
 	Name string
 	IsDir bool
+}
+
+
+//datatype of song in db.
+type Song struct{
+	Name string
+	Url string
 }
