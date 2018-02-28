@@ -45,6 +45,7 @@ func main(){
 	
 	/////MONGOBD
 	router.GET("/MusicServer/songlist", showSongListHandler)
+	router.GET("/MusicServer/songlist/:listname", singleSongListHandler)
 	/////
 
 
@@ -52,6 +53,68 @@ func main(){
 	log.Println("Serveing on 8026")
 }
 func showSongListHandler(c *gin.Context){
+	session, err := mgo.DialWithInfo(&mgo.DialInfo{
+		Addrs: Host,
+		// Username: Username,
+		// Password: Password,
+		// Database: Database,
+		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
+		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
+		// },
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	//SongLists in DB.
+	songListNames, err := session.DB(Database).CollectionNames()
+	if err != nil{
+		panic(err)
+	}
+
+	//Make the list of json for output.
+	list := make([]SongListAll, 0)
+	
+	list = append(list, SongListAll{
+		SongListNames: songListNames,
+	})
+	
+	c.JSON(http.StatusOK, list)
+
+
+}
+func singleSongListHandler(c *gin.Context){
+	session, err := mgo.DialWithInfo(&mgo.DialInfo{
+		Addrs: Host,
+		// Username: Username,
+		// Password: Password,
+		// Database: Database,
+		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
+		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
+		// },
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	// Collection
+	listName := c.Param("listname")
+	
+	collection := session.DB(Database).C(listName)
+
+	// Find All
+	var songs []Song
+	err = collection.Find(nil).All(&songs)
+	if err != nil {
+		panic(err)
+	}
+	c.JSON(http.StatusOK, songs)
+	
+
+}
+func insertSongToListHandler(c *gin.Context){
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs: Host,
 		// Username: Username,
@@ -80,6 +143,7 @@ func showSongListHandler(c *gin.Context){
 	}
 
 }
+
 func directoryHandler(c *gin.Context){
 	dir := c.Query("dir")
 	//read files in directory.
@@ -207,4 +271,9 @@ type Item struct{
 type Song struct{
 	Name string
 	Url string
+}
+
+
+type SongListAll struct{
+	SongListNames []string
 }
