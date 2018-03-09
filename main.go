@@ -46,6 +46,7 @@ func main(){
 	/////MONGOBD
 	router.GET("/MusicServer/songlist", showSongListHandler)
 	router.GET("/MusicServer/songlist/:listname", singleSongListHandler)
+	router.POST("/MusicServer/songlist", addToSongListHandler)
 	/////
 
 
@@ -114,7 +115,7 @@ func singleSongListHandler(c *gin.Context){
 	
 
 }
-func insertSongToListHandler(c *gin.Context){
+func addToSongListHandler(c *gin.Context){
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs: Host,
 		// Username: Username,
@@ -129,20 +130,53 @@ func insertSongToListHandler(c *gin.Context){
 	}
 	defer session.Close()
 
+
+	songList := c.PostForm("songlist")
+	songname := c.PostForm("name")
+	songurl := c.PostForm("url")
 	// Collection
-	collection := session.DB(Database).C("testSongList")
+	collection := session.DB(Database).C(songList)
 
-	testSong := Song{
-		Name:"test-song1",
-		Url: "urlurlurl",
+	insertSong := Song{
+		Name:songname,
+		Url: songurl,
 	}
-
+	log.Println(insertSong)
 	// Insert
-	if err := collection.Insert(testSong); err != nil {
+	if err := collection.Insert(insertSong); err != nil {
 		panic(err)
 	}
 
+//	// Collection
+//	collection := session.DB(Database).C("newnewbe")
+//
+//	insertSong := Song{
+//		Name:"haha"  ,
+//		Url: "hahaurl",
+//	}
+//
+//	// Insert
+//	if err := collection.Insert(insertSong); err != nil {
+//		panic(err)
+//	}
+//
+	//SongLists in DB.
+	songListNames, err := session.DB(Database).CollectionNames()
+	if err != nil{
+		panic(err)
+	}
+
+	//Make the list of json for output.
+	list := make([]SongListAll, 0)
+	
+	list = append(list, SongListAll{
+		SongListNames: songListNames,
+	})
+	
+	c.JSON(http.StatusOK, list)
+
 }
+
 
 func directoryHandler(c *gin.Context){
 	dir := c.Query("dir")
