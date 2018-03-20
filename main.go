@@ -13,7 +13,7 @@ import(
 	"os"
 	"path/filepath"
 	"gopkg.in/mgo.v2"
-	//"gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2/bson"
 )
 var audioExt = map[string]bool{
 	".wav": true,".webm": true,".opus": true,".ogg": true,".mp3": true,".m4a": true,".flac": true,
@@ -47,12 +47,69 @@ func main(){
 	router.GET("/MusicServer/songlist", showSongListHandler)
 	router.GET("/MusicServer/songlist/:listname", singleSongListHandler)
 	router.POST("/MusicServer/songlist", addToSongListHandler)
+	router.POST("/MusicServer/songquery", songQueryHandler)
 	/////
 
 
 	router.Run(":8026")
 	log.Println("Serveing on 8026")
 }
+func songQueryHandler(c *gin.Context){
+//	songurl := c.Query("url")
+//	log.Println("songurl="+songurl)
+	songurl := c.PostForm("url")
+//	log.Println("songurl2="+songurl2)
+	session, err := mgo.DialWithInfo(&mgo.DialInfo{
+		Addrs: Host,
+		// Username: Username,
+		// Password: Password,
+		// Database: Database,
+		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
+		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
+		// },
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+
+//	querySong := SongUrl{
+//		Url: songurl,
+//	}
+//	//SongLists in DB.
+	songListNames, err := session.DB(Database).CollectionNames()
+	if err != nil{
+		panic(err)
+	}
+
+	songListOutput := []string{}
+	var songs []Song
+	for _, songListName := range songListNames {
+		err = session.DB(Database).C(songListName).Find(bson.M{"url": songurl}).All(&songs)
+		if err != nil{
+			panic(err)
+		}
+
+		if(len(songs)!=0){
+			songListOutput = append(songListOutput, songListName)
+			log.Println("findin: " + songListName)
+		} 
+		
+	}
+
+	
+	//Make the list of json for output.
+	list := make([]SongListAll, 0)
+	
+	list = append(list, SongListAll{
+		SongListNames: songListOutput,
+	})
+	
+	c.JSON(http.StatusOK, list)
+
+}
+
 func showSongListHandler(c *gin.Context){
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs: Host,
@@ -306,7 +363,14 @@ type Song struct{
 	Name string
 	Url string
 }
-
+type SongInDB struct{
+	ID bson.ObjectId
+	Name string
+	Url string
+}
+type SongUrl struct{
+	Url string
+}
 
 type SongListAll struct{
 	SongListNames []string
