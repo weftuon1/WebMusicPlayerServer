@@ -34,8 +34,12 @@ const (
 func main(){
 	router := gin.Default()
 	//router.GET("/ws/MusicPlayer", func(c *gin.Context){wshandler(c.Writer, c.Request)})
-	router.Use(cors.Default())
-
+	//router.Use(cors.Default())
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	config.AllowMethods = []string{"GET", "POST", "DELETE"}
+	router.Use(cors.New(config))
+	
 	//serve for music fils.
 	router.Static("/MusicServer/file/", root)
 
@@ -48,11 +52,59 @@ func main(){
 	router.GET("/MusicServer/songlist/:listname", singleSongListHandler)
 	router.POST("/MusicServer/songlist", addToSongListHandler)
 	router.POST("/MusicServer/songquery", songQueryHandler)
+	router.DELETE("/MusicServer/songlist", deleteSongHandler)
 	/////
 
 
 	router.Run(":8026")
 	log.Println("Serveing on 8026")
+}
+func deleteSongHandler(c *gin.Context){
+	session, err := mgo.DialWithInfo(&mgo.DialInfo{
+		Addrs: Host,
+		// Username: Username,
+		// Password: Password,
+		// Database: Database,
+		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
+		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
+		// },
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+
+	songList := c.PostForm("songlist")
+	songname := c.PostForm("name")
+	songurl := c.PostForm("url")
+	// Collection
+	collection := session.DB(Database).C(songList)
+
+	deleteSong := Song{
+		Name:songname,
+		Url: songurl,
+	}
+
+	// delete
+	if _, err := collection.RemoveAll(deleteSong); err != nil {
+		panic(err)
+	}
+
+	songListNames, err := session.DB(Database).CollectionNames()
+	if err != nil{
+		panic(err)
+	}
+
+	//Make the list of json for output.
+	list := make([]SongListAll, 0)
+	
+	list = append(list, SongListAll{
+		SongListNames: songListNames,
+	})
+	
+	c.JSON(http.StatusOK, list)
+
 }
 func songQueryHandler(c *gin.Context){
 //	songurl := c.Query("url")
