@@ -1,17 +1,13 @@
 package main
 
 import (
-	//"html/template"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"net/http"
-	//"github.com/gorilla/websocket"
-	// "encoding/json"
-	//"strconv"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 	"os"
 	"path/filepath"
 )
@@ -35,11 +31,8 @@ const (
 	Collection = "YOUR_COLLECTION"
 )
 
-/////
 func main() {
 	router := gin.Default()
-	//router.GET("/ws/MusicPlayer", func(c *gin.Context){wshandler(c.Writer, c.Request)})
-	//router.Use(cors.Default())
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "DELETE"}
@@ -62,15 +55,10 @@ func main() {
 	router.Run(":8026")
 	log.Println("Serveing on 8026")
 }
+
 func deleteSongHandler(c *gin.Context) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs: Host,
-		// Username: Username,
-		// Password: Password,
-		// Database: Database,
-		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
-		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
-		// },
 	})
 	if err != nil {
 		panic(err)
@@ -109,28 +97,16 @@ func deleteSongHandler(c *gin.Context) {
 
 }
 func songQueryHandler(c *gin.Context) {
-	//	songurl := c.Query("url")
-	//	log.Println("songurl="+songurl)
 	songurl := c.PostForm("url")
-	//	log.Println("songurl2="+songurl2)
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs: Host,
-		// Username: Username,
-		// Password: Password,
-		// Database: Database,
-		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
-		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
-		// },
 	})
 	if err != nil {
 		panic(err)
 	}
 	defer session.Close()
 
-	//	querySong := SongUrl{
-	//		Url: songurl,
-	//	}
-	//	//SongLists in DB.
+	//SongLists in DB.
 	songListNames, err := session.DB(Database).CollectionNames()
 	if err != nil {
 		panic(err)
@@ -165,12 +141,6 @@ func songQueryHandler(c *gin.Context) {
 func showSongListHandler(c *gin.Context) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs: Host,
-		// Username: Username,
-		// Password: Password,
-		// Database: Database,
-		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
-		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
-		// },
 	})
 	if err != nil {
 		panic(err)
@@ -196,12 +166,6 @@ func showSongListHandler(c *gin.Context) {
 func singleSongListHandler(c *gin.Context) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs: Host,
-		// Username: Username,
-		// Password: Password,
-		// Database: Database,
-		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
-		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
-		// },
 	})
 	if err != nil {
 		panic(err)
@@ -225,12 +189,6 @@ func singleSongListHandler(c *gin.Context) {
 func addToSongListHandler(c *gin.Context) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
 		Addrs: Host,
-		// Username: Username,
-		// Password: Password,
-		// Database: Database,
-		// DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
-		// 	return tls.Dial("tcp", addr.String(), &tls.Config{})
-		// },
 	})
 	if err != nil {
 		panic(err)
@@ -253,19 +211,6 @@ func addToSongListHandler(c *gin.Context) {
 		panic(err)
 	}
 
-	//	// Collection
-	//	collection := session.DB(Database).C("newnewbe")
-	//
-	//	insertSong := Song{
-	//		Name:"haha"  ,
-	//		Url: "hahaurl",
-	//	}
-	//
-	//	// Insert
-	//	if err := collection.Insert(insertSong); err != nil {
-	//		panic(err)
-	//	}
-	//
 	//SongLists in DB.
 	songListNames, err := session.DB(Database).CollectionNames()
 	if err != nil {
@@ -314,88 +259,7 @@ func directoryHandler(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, names)
-
-	/////WEBSOCKET VERSION
-	// for _, f := range s_dir{
-	// 	msg_out := Item{
-	// 		"item",
-	// 		f.Name(),
-	// 		strconv.FormatBool(f.IsDir()),
-	// 	}
-	// 	conn.WriteJSON(msg_out)
-	// }
-	/////
 }
-
-/////////////////WEBSOCKET VERSION//////////////////
-// var upgrader =websocket.Upgrader{
-// 	CheckOrigin :func(r *http.Request)bool{
-// 		return true
-// 	},
-// }
-// func wshandler(w http.ResponseWriter, r *http.Request){
-// 	conn, err := upgrader.Upgrade(w, r, nil)
-// 	//defer conn.Close()
-// 	if err != nil{
-// 		log.Println("Failed to set websocket upgrade: %+v", err)
-// 		return
-// 	}
-// 	var msg map[string]interface{}
-// 	for{
-// 		err = conn.ReadJSON(&msg)
-// 		if err != nil{
-// 			log.Println("Failed to read json", err)
-// 			return
-// 		}
-// 		log.Println(msg["Action"].(string))
-// 		switch msg["Action"].(string){
-// 		case "list":
-// 			log.Println("Got list")
-// 			msg_out := UpdateList{
-// 				"list",
-// 			}
-// 			log.Println(msg_out);
-// 			conn.WriteJSON(msg_out)
-// 			//start read file
-// 			files, err := ioutil.ReadDir(root+msg["Path"].(string))
-// 			log.Println(root+msg["Path"].(string));
-// 			if err != nil{
-// 				log.Fatal(err)
-// 			}
-// 			s_dir := make([]os.FileInfo,0)
-// 			s_file := make([]os.FileInfo,0)
-// 			for _,f:=range files{
-// 				if(f.Name()[0] != []byte(".")[0]){
-// 					ext := filepath.Ext(f.Name())
-// 					if(f.IsDir()){
-// 						s_dir=append(s_dir,f)
-// 					} else if audioExt[ext]{
-// 						s_file = append(s_file,f)
-// 					}
-// 				}
-// 			}
-// 			s_dir = append(s_dir, s_file...)
-// 			for _,f:=range s_dir{
-// 				msg_out := Item{
-// 					"item",
-// 					f.Name(),
-// 					strconv.FormatBool(f.IsDir()),
-// 				}
-// 				conn.WriteJSON(msg_out)
-// 			}
-// 			msg_out = UpdateList{
-// 				"end",
-// 			}
-// 			log.Println(msg_out);
-// 			conn.WriteJSON(msg_out)
-// 		}
-// 	}
-//
-// }
-// type UpdateList struct{
-// 	Action string
-// }
-////////////////////////////////////////////////
 
 //datatype of file or folder
 type Item struct {
