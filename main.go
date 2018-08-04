@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/BurntSushi/toml"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/mgo.v2"
@@ -12,26 +13,17 @@ import (
 	"path/filepath"
 )
 
-var audioExt = map[string]bool{
-	".wav": true, ".webm": true, ".opus": true, ".ogg": true, ".mp3": true, ".m4a": true, ".flac": true,
-}
-
-var root = "./web/mnt"
-
-/////const for MONGODB.
-var Host = []string{
-	"127.0.0.1:27017",
-	// replica set addrs...
-}
-
-const (
-	Username   = "YOUR_USERNAME"
-	Password   = "YOUR_PASS"
-	Database   = "playerSongList"
-	Collection = "YOUR_COLLECTION"
-)
+var conf Config
 
 func main() {
+	tomlData, err := ioutil.ReadFile("./config.toml")
+	if err != nil {
+		panic("can't read config.toml")
+	}
+	if _, err := toml.Decode(string(tomlData), &conf); err != nil {
+		panic("config parse error")
+	}
+	log.Println("line")
 	router := gin.Default()
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
@@ -39,7 +31,7 @@ func main() {
 	router.Use(cors.New(config))
 
 	//serve for music fils.
-	router.Static("/MusicServer/file/", root)
+	router.Static("/MusicServer/file/", conf.File.Root)
 
 	//serve for files list.
 	router.GET("/MusicServer/dir", directoryHandler)
@@ -58,7 +50,7 @@ func main() {
 
 func deleteSongHandler(c *gin.Context) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
-		Addrs: Host,
+		Addrs: conf.DB.Host,
 	})
 	if err != nil {
 		panic(err)
@@ -69,7 +61,7 @@ func deleteSongHandler(c *gin.Context) {
 	songname := c.PostForm("name")
 	songurl := c.PostForm("url")
 	// Collection
-	collection := session.DB(Database).C(songList)
+	collection := session.DB(conf.DB.Name).C(songList)
 
 	deleteSong := Song{
 		Name: songname,
@@ -81,7 +73,7 @@ func deleteSongHandler(c *gin.Context) {
 		panic(err)
 	}
 
-	songListNames, err := session.DB(Database).CollectionNames()
+	songListNames, err := session.DB(conf.DB.Name).CollectionNames()
 	if err != nil {
 		panic(err)
 	}
@@ -99,7 +91,7 @@ func deleteSongHandler(c *gin.Context) {
 func songQueryHandler(c *gin.Context) {
 	songurl := c.PostForm("url")
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
-		Addrs: Host,
+		Addrs: conf.DB.Host,
 	})
 	if err != nil {
 		panic(err)
@@ -107,7 +99,7 @@ func songQueryHandler(c *gin.Context) {
 	defer session.Close()
 
 	//SongLists in DB.
-	songListNames, err := session.DB(Database).CollectionNames()
+	songListNames, err := session.DB(conf.DB.Name).CollectionNames()
 	if err != nil {
 		panic(err)
 	}
@@ -115,7 +107,7 @@ func songQueryHandler(c *gin.Context) {
 	songListOutput := []string{}
 	var songs []Song
 	for _, songListName := range songListNames {
-		err = session.DB(Database).C(songListName).Find(bson.M{"url": songurl}).All(&songs)
+		err = session.DB(conf.DB.Name).C(songListName).Find(bson.M{"url": songurl}).All(&songs)
 		if err != nil {
 			panic(err)
 		}
@@ -140,7 +132,7 @@ func songQueryHandler(c *gin.Context) {
 
 func showSongListHandler(c *gin.Context) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
-		Addrs: Host,
+		Addrs: conf.DB.Host,
 	})
 	if err != nil {
 		panic(err)
@@ -148,7 +140,7 @@ func showSongListHandler(c *gin.Context) {
 	defer session.Close()
 
 	//SongLists in DB.
-	songListNames, err := session.DB(Database).CollectionNames()
+	songListNames, err := session.DB(conf.DB.Name).CollectionNames()
 	if err != nil {
 		panic(err)
 	}
@@ -165,7 +157,7 @@ func showSongListHandler(c *gin.Context) {
 }
 func singleSongListHandler(c *gin.Context) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
-		Addrs: Host,
+		Addrs: conf.DB.Host,
 	})
 	if err != nil {
 		panic(err)
@@ -175,7 +167,7 @@ func singleSongListHandler(c *gin.Context) {
 	// Collection
 	listName := c.Param("listname")
 
-	collection := session.DB(Database).C(listName)
+	collection := session.DB(conf.DB.Name).C(listName)
 
 	// Find All
 	var songs []Song
@@ -188,7 +180,7 @@ func singleSongListHandler(c *gin.Context) {
 }
 func addToSongListHandler(c *gin.Context) {
 	session, err := mgo.DialWithInfo(&mgo.DialInfo{
-		Addrs: Host,
+		Addrs: conf.DB.Host,
 	})
 	if err != nil {
 		panic(err)
@@ -199,7 +191,7 @@ func addToSongListHandler(c *gin.Context) {
 	songname := c.PostForm("name")
 	songurl := c.PostForm("url")
 	// Collection
-	collection := session.DB(Database).C(songList)
+	collection := session.DB(conf.DB.Name).C(songList)
 
 	insertSong := Song{
 		Name: songname,
@@ -212,7 +204,7 @@ func addToSongListHandler(c *gin.Context) {
 	}
 
 	//SongLists in DB.
-	songListNames, err := session.DB(Database).CollectionNames()
+	songListNames, err := session.DB(conf.DB.Name).CollectionNames()
 	if err != nil {
 		panic(err)
 	}
@@ -231,7 +223,7 @@ func addToSongListHandler(c *gin.Context) {
 func directoryHandler(c *gin.Context) {
 	dir := c.Query("dir")
 	//read files in directory.
-	files, err := ioutil.ReadDir(root + dir)
+	files, err := ioutil.ReadDir(conf.File.Root + dir)
 	if err != nil {
 
 	}
@@ -243,7 +235,7 @@ func directoryHandler(c *gin.Context) {
 			ext := filepath.Ext(f.Name())
 			if f.IsDir() {
 				s_dir = append(s_dir, f)
-			} else if audioExt[ext] { //check if file is music file.
+			} else if isAudioExt(ext) { //check if file is music file.
 				s_file = append(s_file, f)
 			}
 		}
@@ -259,6 +251,31 @@ func directoryHandler(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, names)
+}
+
+func isAudioExt(val string) bool {
+	for i := range conf.File.AudioExt {
+		if conf.File.AudioExt[i] == val {
+			return true
+		}
+	}
+	return false
+}
+
+// global config type
+type Config struct {
+	File fileConfig `toml:"file"`
+	DB   dbConfig   `toml:"database"`
+}
+
+type fileConfig struct {
+	Root     string   `toml:"root"`
+	AudioExt []string `toml:"audioExt"`
+}
+
+type dbConfig struct {
+	Host []string `toml:"host"`
+	Name string   `toml:"dbName"`
 }
 
 //datatype of file or folder

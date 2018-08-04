@@ -1,0 +1,16 @@
+
+[file]
+root = "./web/mnt"
+audioExt = [
+  ".wav",
+  ".webm",
+  ".opus",
+  ".ogg",
+  ".mp3",
+  ".m4a",
+  ".flac"
+]
+
+[database]
+host = ["127.0.0.1:27017"]
+dbName = "playerSongList"

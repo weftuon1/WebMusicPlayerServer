@@ -1,2 +1,3 @@
 web/mnt/*
 nohup.out
+config.toml
