@@ -31,17 +31,17 @@ func main() {
 	router.Use(cors.New(config))
 
 	//serve for music fils.
-	router.Static("/MusicServer/file/", conf.File.Root)
+	router.Static(conf.Server.UrlPrefix+"/file/", conf.Server.Root)
 
 	//serve for files list.
-	router.GET("/MusicServer/dir", directoryHandler)
+	router.GET(conf.Server.UrlPrefix+"/dir", directoryHandler)
 
 	/////MONGOBD
-	router.GET("/MusicServer/songlist", showSongListHandler)
-	router.GET("/MusicServer/songlist/:listname", singleSongListHandler)
-	router.POST("/MusicServer/songlist", addToSongListHandler)
-	router.POST("/MusicServer/songquery", songQueryHandler)
-	router.DELETE("/MusicServer/songlist", deleteSongHandler)
+	router.GET(conf.Server.UrlPrefix+"/songlist", showSongListHandler)
+	router.GET(conf.Server.UrlPrefix+"/songlist/:listname", singleSongListHandler)
+	router.POST(conf.Server.UrlPrefix+"/songlist", addToSongListHandler)
+	router.POST(conf.Server.UrlPrefix+"/songquery", songQueryHandler)
+	router.DELETE(conf.Server.UrlPrefix+"/songlist", deleteSongHandler)
 	/////
 
 	router.Run(":8026")
@@ -116,7 +116,6 @@ func songQueryHandler(c *gin.Context) {
 			songListOutput = append(songListOutput, songListName)
 			log.Println("findin: " + songListName)
 		}
-
 	}
 
 	//Make the list of json for output.
@@ -223,7 +222,7 @@ func addToSongListHandler(c *gin.Context) {
 func directoryHandler(c *gin.Context) {
 	dir := c.Query("dir")
 	//read files in directory.
-	files, err := ioutil.ReadDir(conf.File.Root + dir)
+	files, err := ioutil.ReadDir(conf.Server.Root + dir)
 	if err != nil {
 
 	}
@@ -254,8 +253,8 @@ func directoryHandler(c *gin.Context) {
 }
 
 func isAudioExt(val string) bool {
-	for i := range conf.File.AudioExt {
-		if conf.File.AudioExt[i] == val {
+	for i := range conf.Server.AudioExt {
+		if conf.Server.AudioExt[i] == val {
 			return true
 		}
 	}
@@ -264,13 +263,14 @@ func isAudioExt(val string) bool {
 
 // global config type
 type Config struct {
-	File fileConfig `toml:"file"`
-	DB   dbConfig   `toml:"database"`
+	Server serverConfig `toml:"server"`
+	DB     dbConfig     `toml:"database"`
 }
 
-type fileConfig struct {
-	Root     string   `toml:"root"`
-	AudioExt []string `toml:"audioExt"`
+type serverConfig struct {
+	Root      string   `toml:"root"`
+	AudioExt  []string `toml:"audioExt"`
+	UrlPrefix string   `toml:"urlPrefix"`
 }
 
 type dbConfig struct {
